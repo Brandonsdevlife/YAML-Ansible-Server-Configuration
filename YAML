@@ -1,0 +1,44 @@
+---
+- name: Configure server
+  hosts: all
+  become: true
+  
+  vars:
+    desired_configuration:
+      - name: Install Apache
+        package: apache2
+      - name: Install MySQL
+        package: mysql-server
+        service:
+          name: mysql
+          state: started
+          enabled: true
+      - name: Configure Firewall
+        firewalld:
+          service: http
+          state: enabled
+          immediate: true
+
+  tasks:
+    - name: Install required packages
+      apt:
+        name: "{{ item.package }}"
+        state: present
+      loop: "{{ desired_configuration }}"
+      when: item.package is defined
+
+    - name: Start and enable services
+      systemd:
+        name: "{{ item.service.name }}"
+        state: "{{ item.service.state }}"
+        enabled: "{{ item.service.enabled }}"
+      loop: "{{ desired_configuration }}"
+      when: item.service is defined
+
+    - name: Configure firewall rules
+      firewalld:
+        service: "{{ item.firewalld.service }}"
+        state: "{{ item.firewalld.state }}"
+        immediate: "{{ item.firewalld.immediate }}"
+      loop: "{{ desired_configuration }}"
+      when: item.firewalld is defined
